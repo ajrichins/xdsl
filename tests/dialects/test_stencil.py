@@ -15,6 +15,7 @@ from xdsl.dialects.builtin import (
     IntegerType,
     ArrayAttr,
     IndexType,
+    ModuleOp,
 )
 from xdsl.dialects.stencil import (
     CastOp,
@@ -34,11 +35,19 @@ from xdsl.dialects.stencil import (
     IndexOp,
     AccessOp,
 )
+
 from xdsl.dialects.memref import MemRefType
+from xdsl.dialects.stencil import CastOp
+from xdsl.dialects.arith import Addf
+from xdsl.dialects.func import FuncOp
+
+
 from xdsl.ir import Attribute, Block
 from xdsl.utils.exceptions import VerifyException
 from xdsl.utils.hints import isa
 from xdsl.utils.test_value import TestSSAValue
+
+from conftest import assert_print_op
 
 
 def test_stencilboundsattr_verify():
@@ -46,13 +55,15 @@ def test_stencilboundsattr_verify():
         StencilBoundsAttr.new([IndexAttr.get(1), IndexAttr.get(2, 2)])
     assert (
         str(e.value)
-        == "Incoherent stencil bounds: lower and upper bounds must have the same dimensionality."
+        == "Incoherent stencil bounds: lower and upper bounds must have the same"
+        " dimensionality."
     )
     with pytest.raises(VerifyException) as e:
         StencilBoundsAttr.new([IndexAttr.get(2, 2), IndexAttr.get(2, 2)])
     assert (
         str(e.value)
-        == "Incoherent stencil bounds: upper bound must be strictly greater than lower bound."
+        == "Incoherent stencil bounds: upper bound must be strictly greater than"
+        " lower bound."
     )
 
 
@@ -612,3 +623,74 @@ def test_buffer():
     assert isinstance(buffer, BufferOp)
     assert buffer.temp == temp
     assert buffer.res.typ == res_typ
+
+
+# TODO: Move to a notebook at some point with proper documentation
+def test_1d3pt_stencil_construct():
+    """
+    An example 1d-3pt stencil implementation from XDSL Python-land
+    using the stencil dialect
+    """
+
+    shape = (8,)
+    space_order = 2
+    r = space_order // 2
+    symbolic_shape = (0 - r, shape[0] - r)
+
+    # Domain with halo shape
+    temp0 = TempType(len(shape), f32)
+
+    # Computational domain shape
+    field0 = FieldType([symbolic_shape], f32)
+
+    # The computation block
+    block0 = Block.from_arg_types(arg_types=[temp0])
+
+    # Stencil computation
+    stencil_ops = [
+        stencil_acs_l := AccessOp.get(block0.args[0], (-1,)),
+        stencil_acs_c := AccessOp.get(block0.args[0], (0,)),
+        stencil_acs_r := AccessOp.get(block0.args[0], (1,)),
+        stencil_comp0 := Addf(stencil_acs_l, stencil_acs_c),
+        stencil_comp1 := Addf(stencil_comp0, stencil_acs_r),
+        # Define the return operation
+        return_op_ := ReturnOp.get([stencil_comp1]),  # type: ignore
+    ]
+
+    # Add all ops to a the block
+    block0.add_ops([*stencil_ops])
+
+    # Build computation kernel
+    func0 = FuncOp("kernel", ([field0, field0], []))
+
+    load0 = LoadOp.get(func0.args[0])
+    apply0 = ApplyOp.get([load0], block0, [temp0])
+    store0 = StoreOp.get(
+        apply0.results[0], func0.args[1], IndexAttr.get(0), IndexAttr.get(6)
+    )
+
+    # Add load, apply, store to the body of the kernel
+    func0.body.block.add_ops([load0, apply0, store0])
+
+    # Wrap all in a ModuleOp
+    mod = ModuleOp([func0])
+
+    expected = """
+builtin.module {
+  func.func @kernel(%0 : !stencil.field<[-1,7]xf32>, %1 : !stencil.field<[-1,7]xf32>) {
+    %2 = "stencil.load"(%0) : (!stencil.field<[-1,7]xf32>) -> !stencil.temp<?xf32>
+    %3 = "stencil.apply"(%2) ({
+    ^0(%4 : !stencil.temp<?xf32>):
+      %5 = "stencil.access"(%4) {"offset" = #stencil.index<-1>} : (!stencil.temp<?xf32>) -> f32
+      %6 = "stencil.access"(%4) {"offset" = #stencil.index<0>} : (!stencil.temp<?xf32>) -> f32
+      %7 = "stencil.access"(%4) {"offset" = #stencil.index<1>} : (!stencil.temp<?xf32>) -> f32
+      %8 = arith.addf %5, %6 : f32
+      %9 = arith.addf %8, %7 : f32
+      "stencil.return"(%9) : (f32) -> ()
+    }) : (!stencil.temp<?xf32>) -> !stencil.temp<?xf32>
+    "stencil.store"(%3, %1) {"lb" = #stencil.index<0>, "ub" = #stencil.index<6>} : (!stencil.temp<?xf32>, !stencil.field<[-1,7]xf32>) -> ()
+  }
+}
+"""  # noqa
+
+    assert_print_op(mod, expected, None, print_generic_format=False)
