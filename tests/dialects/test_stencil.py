@@ -644,7 +644,7 @@ def test_1d3pt_stencil_construct():
     field0 = FieldType([symbolic_shape], f32)
 
     # The computation block
-    block0 = Block.from_arg_types(arg_types=[temp0])
+    block0 = Block(arg_types=[temp0])
 
     # Stencil computation
     stencil_ops = [
