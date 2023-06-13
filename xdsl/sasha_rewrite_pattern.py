@@ -8,8 +8,8 @@ from typing import (
     Any,
     Concatenate,
     Generic,
+    Iterable,
     Iterator,
-    NamedTuple,
     ParamSpec,
     TypeAlias,
     TypeVar,
@@ -105,9 +105,16 @@ class PropertyConstraint(Constraint):
         return self.b.set(ctx, b_obj)
 
 
-class Query(NamedTuple):
-    variables: list[Variable[Any]] = []
-    constraints: list[Constraint] = []
+class Query:
+    variables: list[Variable[Any]]
+    constraints: list[Constraint]
+    var_id: int = 0
+
+    def __init__(
+        self, variables: Iterable[Variable[Any]], constraints: Iterable[Constraint]
+    ):
+        self.variables = list(variables)
+        self.constraints = list(constraints)
 
     @staticmethod
     def root(root_type: type[OperationInvT]) -> Query:
@@ -137,6 +144,11 @@ class Query(NamedTuple):
         for op in module.walk():
             if (env := self.match(op)) is not None:
                 yield env
+
+    def next_var_id(self) -> int:
+        id = self.var_id
+        self.var_id = id + 1
+        return id
 
 
 class QueryRewritePattern(RewritePattern):
