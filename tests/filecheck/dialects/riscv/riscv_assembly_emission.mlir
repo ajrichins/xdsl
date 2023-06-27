@@ -60,7 +60,6 @@
   // CHECK-NEXT: nop
 
   // RV32I/RV64I: 2.5 Control Transfer Instructions
-  // terminators continue at the end of module
 
   // Unconditional Branch Instructions
   "riscv.jal"() {"immediate" = 1 : i32} : () -> ()
@@ -81,6 +80,9 @@
   // CHECK-NEXT: jalr j0, zero, 1
   "riscv.jalr"(%0) {"immediate" = #riscv.label<"label">} : (!riscv.reg<zero>) -> ()
   // CHECK-NEXT: jalr zero, label
+
+  "riscv.ret"() : () -> ()
+  // CHECK-NEXT: ret
 
   // Conditional Branch Instructions
   "riscv.beq"(%2, %1) {"offset" = 1 : i32}: (!riscv.reg<j2>, !riscv.reg<j1>) -> ()
@@ -158,9 +160,8 @@
   // CHECK-NEXT:  addi j1, j1, 1
   "riscv.label"() {"label" = #riscv.label<"label0">} : () -> ()
   // CHECK-NEXT: label0:
-  "riscv.label"() ({
-    %nested_addi = "riscv.addi"(%1) {"immediate" = 1 : i32}: (!riscv.reg<j1>) -> !riscv.reg<j1>
-  }) {"label" = #riscv.label<"label1">} : () -> ()
+  "riscv.label"() {"label" = #riscv.label<"label1">} : () -> ()
+  %nested_addi = "riscv.addi"(%1) {"immediate" = 1 : i32}: (!riscv.reg<j1>) -> !riscv.reg<j1>
   // CHECK-NEXT: label1:
   // CHECK-NEXT: addi j1, j1, 1
 
@@ -169,10 +170,4 @@
   %custom0, %custom1 = "riscv.custom_assembly_instruction"(%0, %1) {"instruction_name" = "hello"} : (!riscv.reg<zero>, !riscv.reg<j1>) -> (!riscv.reg<j3>, !riscv.reg<j4>)
   // CHECK-NEXT:   hello j3, j4, zero, j1
 
-  // RV32I/RV64I: 2.5 Control Transfer Instructions (cont'd)
-  // terminators
-
-  // Unconditional Branch Instructions
-  "riscv.ret"() : () -> () // pseudo-instruction
-  // CHECK-NEXT: ret
 }) : () -> ()

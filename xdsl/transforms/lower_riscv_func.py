@@ -76,9 +76,9 @@ class LowerRISCVFuncOp(RewritePattern):
             first_op = get_reg_op
             rewriter.erase_block_argument(last_arg)
 
-        label_body = rewriter.move_region_contents_to_new_regions(op.func_body)
+        rewriter.inline_block_after_matched_op(op.func_body.block)
 
-        rewriter.replace_matched_op(riscv.LabelOp(op.func_name.data, region=label_body))
+        rewriter.replace_matched_op(riscv.LabelOp(op.func_name.data))
 
 
 class LowerRISCVFuncReturnOp(RewritePattern):

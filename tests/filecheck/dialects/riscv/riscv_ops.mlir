@@ -55,7 +55,6 @@
   // CHECK-NEXT: "riscv.nop"() : () -> ()
 
   // RV32I/RV64I: 2.5 Control Transfer Instructions
-  // terminators continue at the end of module
 
   // Unconditional Branch Instructions
   "riscv.jal"() {"immediate" = 1 : i32} : () -> ()
@@ -76,6 +75,9 @@
   // CHECK-NEXT: "riscv.jalr"(%0) {"immediate" = 1 : i32, "rd" = !riscv.reg<>} : (!riscv.reg<>) -> ()
   "riscv.jalr"(%0) {"immediate" = #riscv.label<"label">} : (!riscv.reg<>) -> ()
   // CHECK-NEXT: "riscv.jalr"(%0) {"immediate" = #riscv.label<"label">} : (!riscv.reg<>) -> ()
+
+  "riscv.ret"() : () -> ()
+  // CHECK-NEXT: "riscv.ret"() : () -> ()
 
   // Conditional Branch Instructions
   "riscv.beq"(%0, %1) {"offset" = 1 : i32}: (!riscv.reg<>, !riscv.reg<>) -> ()
@@ -190,11 +192,4 @@
   // RISC-V extensions
   "riscv.scfgw"(%0, %1) : (!riscv.reg<>, !riscv.reg<>) -> ()
   // CHECK-NEXT: "riscv.scfgw"(%0, %1) : (!riscv.reg<>, !riscv.reg<>) -> ()
-
-  // RV32I/RV64I: 2.5 Control Transfer Instructions (cont'd)
-  // terminators
-
-  // Unconditional Branch Instructions
-  "riscv.ret"() : () -> ()
-  // CHECK-NEXT: "riscv.ret"() : () -> ()
 }) : () -> ()

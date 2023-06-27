@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from io import StringIO
 from typing import IO, Iterable, TypeAlias, Sequence
 
-from xdsl.traits import IsTerminator, NoTerminator
+from xdsl.traits import NoTerminator
 
 from xdsl.ir import (
     Dialect,
@@ -1324,8 +1324,6 @@ class ReturnOp(NullaryOperation):
 
     name = "riscv.ret"
 
-    traits = frozenset([IsTerminator()])
-
 
 # Conditional Branches
 
@@ -1822,40 +1820,15 @@ class LabelOp(IRDLOperation, RISCVOp):
     as branch, unconditional jump targets and symbol offsets.
 
     https://github.com/riscv-non-isa/riscv-asm-manual/blob/master/riscv-asm.md#labels
-
-    Optionally, a label can be associated with a single-block region, since
-    that is a common target for jump instructions.
-
-    For example, to generate this assembly:
-    ```
-    label1:
-        add a0, a1, a2
-    ```
-
-    One needs to do the following:
-
-    ``` python
-    @Builder.implicit_region
-    def my_add():
-        a1_reg = TestSSAValue(riscv.RegisterType(riscv.Registers.A1))
-        a2_reg = TestSSAValue(riscv.RegisterType(riscv.Registers.A2))
-        riscv.AddOp(a1_reg, a2_reg, rd=riscv.Registers.A0)
-
-    label_op = riscv.LabelOp("label1", my_add)
-    ```
     """
 
     name = "riscv.label"
     label: LabelAttr = attr_def(LabelAttr)
     comment: StringAttr | None = opt_attr_def(StringAttr)
-    data: OptRegion = opt_region_def("single_block")
-
-    traits = frozenset([NoTerminator()])
 
     def __init__(
         self,
         label: str | LabelAttr,
-        region: OptSingleBlockRegion = None,
         *,
         comment: str | StringAttr | None = None,
     ):
@@ -1863,15 +1836,12 @@ class LabelOp(IRDLOperation, RISCVOp):
             label = LabelAttr(label)
         if isinstance(comment, str):
             comment = StringAttr(comment)
-        if region is None:
-            region = Region()
 
         super().__init__(
             attributes={
                 "label": label,
                 "comment": comment,
             },
-            regions=[region],
         )
 
     def assembly_line(self) -> str | None:
