@@ -41,7 +41,7 @@ from xdsl.transforms.experimental.convert_stencil_to_ll_mlir import (
     ConvertStencilToLLMLIRPass,
 )
 from xdsl.transforms.experimental.dmp.stencil_global_to_local import (
-    GlobalStencilToLocalStencil2DHorizontal,
+    DistributeStencilPass,
     LowerHaloToMPI,
 )
 from xdsl.transforms.experimental.stencil_shape_inference import (
@@ -99,7 +99,7 @@ def get_all_passes() -> list[type[ModulePass]]:
         ConvertStencilToLLMLIRPass,
         DeadCodeElimination,
         DesymrefyPass,
-        GlobalStencilToLocalStencil2DHorizontal,
+        DistributeStencilPass,
         LowerHaloToMPI,
         LowerMPIPass,
         LowerRISCVFunc,
