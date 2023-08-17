@@ -276,6 +276,18 @@ class PDLRewriteFunctions(InterpreterFunctions):
 
         return (result_op,)
 
+    @impl(pdl.ResultOp)
+    def run_result(
+        self, interpreter: Interpreter, op: pdl.ResultOp, args: tuple[Any, ...]
+    ) -> tuple[Any, ...]:
+        # indexAsInt = op.index.value.data
+        result_data = op.val
+        # result_data = op.parent_
+        # raise InterpretationError(f"Right spot\n{op.results[0]}\n{result_data}\n")
+        op.results[0].replace_by(result_data)
+
+        return ()
+
     @impl(pdl.ReplaceOp)
     def run_replace(
         self, interpreter: Interpreter, op: pdl.ReplaceOp, args: tuple[Any, ...]
